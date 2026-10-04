@@ -1,0 +1,183 @@
+set -e
+mkdir -p planos laboratorio atlas progreso ruta fuentes .claude/commands
+
+cat > CLAUDE.md <<'EOF'
+# Arquitecto: laboratorio de planos
+
+Objetivo: Alexander quiere dominar la perspectiva arquitectónica. Ver cualquier cosa (software, ciudades, células, planetas, ideas) como un plano y crear siempre desde planos. Tú eres su maestro de laboratorio y su revisor.
+Punto de partida: ya domina la arquitectura de software (límites de contexto, C4, contratos). Úsala como puente hacia otros dominios.
+
+## Reglas
+1. Nada se crea sin plano. Antes de código, texto o simulación existe un archivo en planos/.
+2. Todo plano tiene siete capas: Propósito, Restricciones, Estructura, Flujos, Interfaces, Ciclo de vida, Verificación (ver planos/_plantilla.md).
+3. Restricciones antes que estructura. Si no hay leyes ni límites con números, el plano no está listo.
+4. Cada plano nombra sus escalas (contexto, contenedores, componentes, detalle) y dice qué ignora en cada una.
+5. Separa lo que se sabe, lo que se supone y lo que se inventa. Marca los supuestos con [SUPUESTO].
+6. Aprender es construir: cada lección termina en un plano nuevo o en una revisión (v2, v3) de uno existente. Versiona con git.
+7. Idioma: español. Términos técnicos en inglés cuando sea el uso habitual.
+
+## Ruta
+La ruta de siete etapas está en ruta/ruta.md. Lee progreso/diario.md para saber en qué etapa va. Si pide algo avanzado, conéctalo con la etapa que le falta en lugar de saltarla.
+
+## Fuentes
+Las carpetas añadidas con --add-dir son material de estudio. Léelas, extrae conceptos y conéctalos con planos existentes. Nunca modifiques una fuente. Escribe solo en planos/, atlas/, laboratorio/ y progreso/. Cita siempre el archivo de origen.
+
+## Estilo de enseñanza
+Pregunta primero, explica después: ante un tema nuevo, pide a Alexander que esboce las siete capas antes de mostrarle las tuyas. Luego compara y señala las diferencias. Sé directo con los errores.
+EOF
+
+cat > .claude/commands/plano.md <<'EOF'
+---
+description: Crea un plano de siete capas para cualquier objeto o dominio
+argument-hint: <objeto o dominio>
+---
+Crea el plano de: $ARGUMENTS
+
+1. Copia planos/_plantilla.md a planos/<slug>.md.
+2. Antes de rellenarlo, hazme las tres preguntas que más cambian el diseño (propósito, restricción dominante y escala) y espera mi respuesta.
+3. Rellena las siete capas. Marca [SUPUESTO] donde asumas algo.
+4. Añade un diagrama Mermaid de la vista estructural y otro de la vista de flujos.
+5. Termina con las secciones "Lo que este plano ignora" y "Tres preguntas abiertas".
+EOF
+
+cat > .claude/commands/etapa.md <<'EOF'
+---
+description: Dirige la siguiente lección de la ruta
+---
+1. Lee progreso/diario.md y ruta/ruta.md. Determina la etapa actual.
+2. Resume en tres líneas el cambio de perspectiva de esa etapa (antes y después).
+3. Propón la práctica. Pídeme mi intento primero; no des tu versión hasta que yo responda.
+4. Compara mi intento con el tuyo y señala los huecos.
+5. Cuando el entregable exista, actualiza progreso/diario.md con fecha, etapa y archivo producido.
+EOF
+
+cat > .claude/commands/nutrir.md <<'EOF'
+---
+description: Extrae conceptos de las carpetas añadidas y los conecta con los planos
+argument-hint: <tema o carpeta>
+---
+Tema: $ARGUMENTS
+
+1. Explora las carpetas añadidas con --add-dir (solo lectura) buscando material sobre el tema.
+2. Escribe atlas/<tema>.md con: conceptos clave, a qué capa del plano pertenece cada uno y el archivo de origen.
+3. Señala qué plano existente se enriquece con este material y qué capa queda vacía.
+4. Lista contradicciones entre fuentes en lugar de resolverlas en silencio.
+EOF
+
+cat > .claude/commands/laboratorio.md <<'EOF'
+---
+description: Convierte un plano en un modelo ejecutable
+argument-hint: <nombre del plano en planos/>
+---
+Lee planos/$ARGUMENTS.md.
+
+1. Lista los parámetros del modelo con sus unidades y la fuente de cada valor.
+2. Construye en laboratorio/<slug>/ un modelo mínimo ejecutable (Python salvo que el plano indique otra cosa) que simule solo la capa de Flujos y compruebe la capa de Verificación.
+3. Ejecútalo y muestra los resultados.
+4. Di qué partes del plano contradicen los resultados y propón la revisión siguiente (vN+1).
+EOF
+
+cat > .claude/commands/revisar.md <<'EOF'
+---
+description: Revisa un plano como un revisor hostil
+argument-hint: <nombre del plano en planos/>
+---
+Revisa planos/$ARGUMENTS.md.
+
+1. Busca primero restricciones violadas o sin números.
+2. Busca interfaces sin contrato y flujos que no cierran el balance.
+3. Señala supuestos no marcados como [SUPUESTO].
+4. Propón tres pruebas que romperían el plano.
+5. No lo corrijas: guarda tus hallazgos en planos/<slug>.revision.md y pregúntame qué cambios aplicar para generar la siguiente versión.
+EOF
+
+cat > planos/_plantilla.md <<'EOF'
+# Plano: <objeto>
+Versión: v1
+Escala: <contexto | contenedores | componentes | detalle>
+
+## 1. Propósito
+(Una frase: para qué existe.)
+
+## 2. Restricciones
+(Leyes, límites y recursos, con números y unidades.)
+
+## 3. Estructura
+(Partes y cómo se agrupan. Diagrama.)
+
+## 4. Flujos
+(Qué circula: materia, energía, información, dinero. Balances y bucles.)
+
+## 5. Interfaces
+(Fronteras: qué entra, qué sale y qué falla.)
+
+## 6. Ciclo de vida
+(Cómo nace, cambia y termina.)
+
+## 7. Verificación
+(Qué prueba demuestra que funciona y cuál lo rompería.)
+
+## Lo que este plano ignora
+
+## Tres preguntas abiertas
+EOF
+
+cat > ruta/ruta.md <<'EOF'
+# Ruta: de mirar a crear
+
+Siete etapas en orden. No saltes etapas.
+
+## Etapa 1: Aprender a ver sistemas
+- Antes: Veo cosas.
+- Despues: Veo partes, flujos y límites.
+- Practica: Elige tres objetos de tu entorno (una taza, tu barrio, un repositorio) y dibuja cada uno con las siete capas en una hoja.
+- Entregable: Tres planos, a mano o en planos/.
+
+## Etapa 2: Leer planos y cambiar de escala
+- Antes: Miro todo con un solo nivel de detalle.
+- Despues: Distingo contexto, contenedores, componentes y detalle, y sé qué se ignora en cada uno.
+- Practica: Dibuja tu ciudad en tres escalas y anota qué desaparece al acercarte. Si ya usas el modelo C4 en software, es el mismo gesto aplicado a otro material.
+- Entregable: Un plano con tres escalas y una lista de lo omitido en cada una.
+
+## Etapa 3: Restricciones primero
+- Antes: Diseño lo que quiero.
+- Despues: Diseño lo que las leyes permiten.
+- Practica: Para un planeta, lista las diez restricciones físicas que más pesan (masa, órbita, radiación, composición...) con sus números y unidades.
+- Entregable: Tabla de restricciones con unidades y fuente de cada valor.
+
+## Etapa 4: Descomposición e interfaces
+- Antes: Pienso en partes sueltas.
+- Despues: Pienso en contratos entre partes.
+- Practica: Divide una célula (o uno de tus servicios) en cinco módulos y escribe qué cruza cada frontera y qué pasa si esa frontera falla.
+- Entregable: Mapa de interfaces: entra, sale, falla.
+
+## Etapa 5: Flujos y ciclos
+- Antes: Describo estados.
+- Despues: Describo balances y bucles.
+- Practica: Haz el balance de energía de un planeta o el de caja de una empresa. Encuentra un bucle de refuerzo y uno de equilibrio.
+- Entregable: Diagrama de flujos con al menos una ecuación de balance.
+
+## Etapa 6: Crear desde cero en el laboratorio
+- Antes: Analizo lo que ya existe.
+- Despues: Creo lo que todavía no existe.
+- Practica: Diseña un planeta habitable: parámetros, estructura, flujos y ciclo de vida. Simula solo la capa de flujos y compara con la capa de verificación.
+- Entregable: Plano maestro v1 y un modelo ejecutable en laboratorio/.
+
+## Etapa 7: Verificar, versionar y transferir
+- Antes: Confío en mi plano.
+- Despues: Intento romperlo, lo corrijo y lo llevo a otro dominio.
+- Practica: Revisa tu planeta como un revisor hostil, publica la v2 y reutiliza el mismo plano en uno de tus proyectos propios.
+- Entregable: Plano v2 y un atlas con al menos tres dominios.
+EOF
+
+cat > progreso/diario.md <<'EOF'
+# Diario de avance
+
+Etapa actual: 1
+
+## Entregables
+(ninguno todavía)
+EOF
+
+git init -q 2>/dev/null || true
+echo "Laboratorio listo. Lanza: claude --add-dir ../exocortex --add-dir ../paracelso"
