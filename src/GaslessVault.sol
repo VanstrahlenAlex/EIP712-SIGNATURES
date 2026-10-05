@@ -58,6 +58,18 @@ contract GaslessVault is EIP712, Nonces {
 		emit Deposited(owner, amount);
 	}
 
+	function withdraw(address to, uint256 amount) external {
+		if (amount == 0) revert ZeroAmount();
+		if (vaultBalanceOf[msg.sender] < amount) revert InsufficientVaultBalance();
+
+		vaultBalanceOf[msg.sender] -= amount;
+		token.transfer(to, amount);
+		emit Withdrawn(msg.sender, to, amount);
+	}
+
+
+
+
 	function DOMAIN_SEPARATOR() external view returns (bytes32) {
 		return _domainSeparatorV4();
 	}
