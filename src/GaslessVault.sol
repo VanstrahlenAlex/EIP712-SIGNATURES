@@ -31,9 +31,31 @@ contract GaslessVault is EIP712, Nonces {
 	function deposit(uint256 amount) external { 
 		if(amount == 0) revert ZeroAmount();
 		vaultBalanceOf[msg.sender] += amount;
-		token.safeTransferFrom(msg.sender, address(this), amount);
+		token.transferFrom(msg.sender, address(this), amount);
 		
 		emit Deposited(msg.sender, amount);
+	}
+
+	function depositWithPermit(
+		address owner,
+		uint256 amount,
+		uint256 deadline,
+		uint8 v,
+		bytes32 r,
+		bytes32 s
+	) external {
+		if (amount == 0) revert ZeroAmount();
+
+		// Step 1: Use the permit signature to approve this vault.
+		token.permit(owner, address(this), amount, deadline, v, r, s);
+
+		// Step 2: Deposit the tokens in the user's vault.
+		vaultBalanceOf[owner] += amount;
+
+		// Step 3: Transfer the tokens from the owner to this contract.
+		token.transferFrom(owner, address(this), amount);
+		
+		emit Deposited(owner, amount);
 	}
 
 	function DOMAIN_SEPARATOR() external view returns (bytes32) {
