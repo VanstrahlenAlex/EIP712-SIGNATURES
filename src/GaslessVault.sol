@@ -68,6 +68,45 @@ contract GaslessVault is EIP712, Nonces {
 	}
 
 
+	function withdrawBySig(
+		address owner, 
+		address to,
+		uint256 amount,
+		uint256 deadline,
+		uint8 v,
+		bytes32 r,
+		bytes32 s
+	) external {
+		if (block.timestamp > deadline) revert DeadlineExpried();
+		if (amount == 0) revert ZeroAmount();
+		if ( vaultBalanceOf[owner] < amount)  revert InsufficientVaultBalance();
+
+		//Step 1 : Build the strcut hash for WithdrawAuthorization
+		bytes32 structHash = keccak256(
+			abi.encode(
+				WITHDRAW_TYPESHASH,
+				owner,
+				to,
+				amount,
+				_useNonce(owner),
+				deadline
+			)
+		);
+
+		// Step2: Compute EIP-712 digest
+		bytes32 digest = _hashTypedDataV4(structHash);
+
+		//Step3: Recover the signer and check
+		address signer = ECDSA.recover(digest, v, r, s);
+		if (signer != owner) revert InvalidWithdrawSignature();
+
+		vaultBalanceOf[owner] -= amount;
+		token.transfer(to, amount);
+
+		emit Withdrawn(owner, to, amount);
+	}
+
+
 
 
 	function DOMAIN_SEPARATOR() external view returns (bytes32) {
