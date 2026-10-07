@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.36;
+pragma solidity ^0.8.35;
 
 import {Test, console2} from "forge-std/Test.sol";
 import {GaslessVault} from "../src/GaslessVault.sol";
@@ -41,5 +41,35 @@ contract EIP712Test is Test {
 
 		token.transfer(ALICE, ALICE_AMOUNT);
 		vm.stopPrank();
+	}
+
+	// ===========================================================
+	// 1: EIP-712 FUNDAMENTALS
+	// ===========================================================
+
+	function test_domainSeparatorComputedCorrectly() public view { 
+		bytes32 domainTypeHash = keccak256("EIP712Domain(string name, string version, uint256 chainId, address verifyingContract)");
+
+		bytes32 expected = keccak256(
+			abi.encode(
+				domainTypeHash,
+				keccak256("PermitToken"),
+				keccak256("1"),
+				block.chainid,
+				address(token)
+			)
+		);
+
+		assertEq(token.DOMAIN_SEPARATOR(), expected, "Domain separator mismatch");
+	}
+
+	function test_tokenAndVaultHaveDifferentDomainSeparators() public view {
+		//The token's domain separator uses name="PermitToken" and address(token)
+		//The vault's domain separator uses name="GaslessVault" and address(vault)
+		//They are DIFERENT, so signatures cannot be replayed across them
+		assertTrue(
+			token.DOMAIN_SEPARATOR() != vault.DOMAIN_SEPARATOR(),
+			"Token and vault should have different domain separators"
+		);
 	}
 }
