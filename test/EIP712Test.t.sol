@@ -103,5 +103,54 @@ contract EIP712Test is Test {
 		
 	}
 
+	// ===============================================================
+	// 4: GASLESS VAULT WITHDRAWLS (Custom EIP-712 Struct)
+	//===============================================================
+	// This section uses a DIFFERENT EIP-712 struct: WithdrawAuthorization. 
+
+	function test_withdrawBySigTransferTokens() public {
+
+		uint256 depositAmount = 500e18;
+		uint256 withdrawAmount = 200e18;
+		uint256 deadline = block.timestamp + 1 hours;
+
+		_depositToVault(ALICE, ALICE_PK, depositAmount); 
+
+		(uint8 v, bytes32 r, bytes32 s) = _signWithdraw(ALICE, ALICE_PK, BOB, withdrawAmount, 0, deadline);
+
+		vm.prank(RELAYER);
+		vault.withdrawBySig(ALICE, BOB, withdrawAmount, deadline, v, r, s);
+		assertEq(vault.vaultBalanceOf(ALICE), depositAmount - withdrawAmount);
+		assertEq(token.balanceOf(BOB), withdrawAmount);
+		
+	}
+
+
+	function _depositToVault(address owner, uint256 ownerPk, uint256 amount) internal {
+		uint256 nonce = token.nonces(owner);
+		uint256 deadline = block.timestamp + 1 hours; 
+
+		(uint8 v, bytes32 r, bytes32 s) = _signPermit(owner, ownerPk, address(vault), amount, nonce, deadline);
+		vault.depositWithPermit(owner, amount, deadline, v, r, s);
+
+	}
+
+	function _signPermit(address owner, uint256 signerPk, address spender, uint256 value, uint256 nonce, uint256 deadline) internal view returns (uint8 v, bytes32 r, bytes32 s) {
+		bytes32 strucHash = keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, value, nonce, deadline));
+		bytes32 digest = keccak256(abi.encodePacked("\x19\x01", token.DOMAIN_SEPARATOR(), strucHash));
+
+		(v, r, s) = vm.sign(signerPk, digest); 
+	}
+
+	function _signWithdraw(address owner, uint256 signerPk, address to, uint256 amount, uint256 nonce, uint256 deadline) internal view returns (uint8 v, bytes32 r, bytes32 s) {
+		bytes32 structHash = keccak256(abi.encode(vault.WITHDRAW_TYPESHASH(), owner, to, amount, nonce, deadline));
+
+		bytes32 digest = keccak256(
+			abi.encodePacked("\x19\x01", vault.DOMAIN_SEPARATOR(), structHash)
+		);
+
+		(v, r, s) = vm.sign(signerPk, digest);
+	}
+
 	
 }
