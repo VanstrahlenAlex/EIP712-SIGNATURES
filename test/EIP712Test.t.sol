@@ -72,4 +72,36 @@ contract EIP712Test is Test {
 			"Token and vault should have different domain separators"
 		);
 	}
+
+	//===============================================================
+	// 2: ERC-2612 PERMIT - Gasless Approvals
+	//===============================================================
+
+	function test_permitSetAllowance() public {
+		uint256 amount = 1000e18;
+		uint256 deadline = block.timestamp + 1 hours;
+		uint256 nonce = token.nonces(ALICE);
+
+		bytes32 structHash = keccak256(
+			abi.encode(
+				PERMIT_TYPEHASH,
+				ALICE,
+				address(vault),
+				amount,
+				nonce,
+				deadline
+			)
+		);
+
+		bytes32 digest = keccak256(abi.encodePacked("\x19\x01", token.DOMAIN_SEPARATOR(), structHash));
+		(uint8 v, bytes32 r, bytes32 s) = vm.sign(ALICE_PK, digest);
+
+		vm.prank(RELAYER);
+		token.permit(ALICE, address(vault), amount, deadline, v, r, s);
+
+		assertEq(token.allowance(ALICE, address(vault)), amount);
+		
+	}
+
+	
 }
